@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MP4 to MP3 Converter</title>
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f0f0f0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      margin: 0.5rem 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #downloadLink {
+      display: none;
+      margin-top: 1rem;
+    }
+    #status {
+      margin-top: 1rem;
+    }
+    @media screen and (max-width: 480px) {
+      .container {
+        padding: 1rem;
+        margin: 1rem;
+      }
+      input, button {
+        font-size: 1rem;
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎧 MP4 → MP3 変換アプリ</h1>
+    <input type="file" id="videoFile" accept="video/mp4">
+    <input type="text" id="filename" placeholder="出力ファイル名（例：MyAudio）">
+    <button onclick="convertToMP3()">🎬 変換</button>
+    <p id="status"></p>
+    <a id="downloadLink" href="#">⬇️ MP3をダウンロード</a>
+  </div>
+
+  <script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: true });
+
+    async function convertToMP3() {
+      const fileInput = document.getElementById("videoFile");
+      const filenameInput = document.getElementById("filename");
+      const downloadLink = document.getElementById("downloadLink");
+      const status = document.getElementById("status");
+
+      if (!fileInput.files.length) {
+        alert("動画ファイルを選んでください。");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const baseName = filenameInput.value.trim() || "Converted_Audio";
+      const outputName = baseName + ".mp3";
+
+      status.textContent = "🔄 変換中... 少々お待ちください";
+      downloadLink.style.display = 'none';
+
+      try {
+        if (!ffmpeg.isLoaded()) {
+          await ffmpeg.load();
+        }
+
+        ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(file));
+        await ffmpeg.run('-i', 'input.mp4', 'output.mp3');
+        const data = ffmpeg.FS('readFile', 'output.mp3');
+
+        const blob = new Blob([data.buffer], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+
+        downloadLink.href = url;
+        downloadLink.download = outputName;
+        downloadLink.textContent = `⬇️ ${outputName} をダウンロード`;
+        downloadLink.style.display = 'inline-block';
+        status.textContent = "✅ 変換完了！";
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ 変換に失敗しました。別のファイルで試してください。";
+      }
+    }
+  </script>
+</body>
+</html>
